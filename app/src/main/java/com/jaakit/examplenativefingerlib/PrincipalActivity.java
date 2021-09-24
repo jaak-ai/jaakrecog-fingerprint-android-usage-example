@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.fragment.app.FragmentManager;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -42,7 +43,6 @@ public class PrincipalActivity extends AppCompatActivity {
     private String token,jwtoken;
     private Context context;
     private EditText edtToken;
-    private ImageView imgPhoto;
     private TextView txtResul;
     private String root;
     @RequiresApi(api = Build.VERSION_CODES.R)
@@ -53,7 +53,6 @@ public class PrincipalActivity extends AppCompatActivity {
         context=this;
 
         edtToken=findViewById(R.id.edtToken);
-        imgPhoto=findViewById(R.id.imgPhoto);
         txtResul=findViewById(R.id.txtREsult);
         root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).toString();
 
@@ -66,6 +65,7 @@ public class PrincipalActivity extends AppCompatActivity {
         });
         }
 
+    @SuppressLint("StaticFieldLeak")
     private class TokenAsyncTask extends AsyncTask<String, Void, String> {
 
 
@@ -74,11 +74,9 @@ public class PrincipalActivity extends AppCompatActivity {
 
                 validateCredentials=new ValidateCredentialsImpl(context);
                 jwtoken=validateCredentials.validateCredentials(strings[0]);
-                Log.e("Getting token:",jwtoken);
+                Log.d("Getting token:",jwtoken);
 
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (JSONException | IOException e) {
                 e.printStackTrace();
             }
 
@@ -90,7 +88,7 @@ public class PrincipalActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
 
             try {
-                Log.e("INTENT  CODE XXXXXXXX",""+result);
+                Log.d("INTENT  CODE XXXXXXXX",""+result);
 
                 Intent myIntent = new Intent(context,
                         Class.forName("com.jaakit.fingeracequisition.FingerActivity"));
@@ -105,50 +103,55 @@ public class PrincipalActivity extends AppCompatActivity {
     }
 
 
+    @SuppressLint("SetTextI18n")
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
          try {
-             Log.e("RESULT  CODE resultCode",""+resultCode);
-             Log.e("RESULT  CODE requestCode",""+requestCode);
+             Log.d("RESULT  CODE resultCode",""+resultCode);
+             Log.d("RESULT  CODE requestCode",""+requestCode);
+
 
              if ((requestCode == 101) && (resultCode == RESULT_OK)) {
-                 Log.e("EXTRACTING DATA","############");
 
                  String fingerLeftWsq=   data.getStringExtra("fingerLeftWsq");
                  String fingerRigthWsq=   data.getStringExtra("fingerRigthWsq");
-                 Log.e("fingerLeftWsq DATA",":"+fingerLeftWsq);
-                 Log.e("fingerRigthWsq DATA",":"+fingerRigthWsq);
-                 if(fingerLeftWsq.length()==0){
-                     fingerLeftWsq=" ";
-                 }
-                 if(fingerRigthWsq.length()==0){
-                     fingerRigthWsq=" ";
-                 }
-                 byte[] bytesWsqLeft = Base64.decode(fingerLeftWsq, 1);
-                 InputStream inputStreamLeftFinger = new ByteArrayInputStream(bytesWsqLeft);
-                 File dirLeft = new File(root + "/wsq_left_finger.wsq");
-                //
-                 byte[] bytesWsqRigth = Base64.decode(fingerRigthWsq, 1);
-                 InputStream inputStreamRigthFinger = new ByteArrayInputStream(bytesWsqRigth);
-                 File dirRigth = new File(root + "/wsq_rigth_finger.wsq");
+                 Log.d("fingerLeftWsq data",":"+fingerLeftWsq);
+                 Log.d("fingerRigthWsq data",":"+fingerRigthWsq);
+                 if(fingerLeftWsq.isEmpty() || fingerRigthWsq.isEmpty()){
+                     txtResul.setText(
 
-                 txtResul.setText("wsq left :"+dirLeft.getAbsoluteFile()
-                         +"\n"+
-                         "wsq rigth string size :"+dirRigth.getAbsoluteFile());
+                             " finger wsq  rigth finger path :"+fingerLeftWsq.length()
+                                     +"\n"+
+                                     " finger rigth wsq path :"+fingerRigthWsq.length());
 
-                 Utils.copyInputStreamToFile(inputStreamLeftFinger, dirLeft);
-                 Utils.copyInputStreamToFile(inputStreamRigthFinger, dirRigth);
+                 }else{
+
+                     byte[] bytesWsqLeft = Base64.decode(fingerLeftWsq, 1);
+                     InputStream inputStreamLeftFinger = new ByteArrayInputStream(bytesWsqLeft);
+                     File dirLeft = new File(root + "/wsq_left_finger.wsq");
+                     Utils.copyInputStreamToFile(inputStreamLeftFinger, dirLeft);
+
+                     byte[] bytesWsqRigth = Base64.decode(fingerRigthWsq, 1);
+                     InputStream inputStreamRigthFinger = new ByteArrayInputStream(bytesWsqRigth);
+                     File dirRigth = new File(root + "/wsq_rigth_finger.wsq");
+                     Utils.copyInputStreamToFile(inputStreamRigthFinger, dirRigth);
+                     txtResul.setText(
+                             " finger left wsq path :"+dirLeft.getAbsolutePath()+"\n"+
+                              " finger rigth wsq path :"+dirRigth.getAbsolutePath());
+
+                 }
+
+
 
 
              }else{
                  String fingerLeftError=   data.getStringExtra("fingerLeftError");
                  String fingerRigthError=   data.getStringExtra("fingerRigthError");
-                 Log.e("fingerLeftError DATA",""+fingerLeftError);
-                 Log.e("fingerRigthError DATA",""+fingerRigthError);
-
-                 Error error=(Error) data.getSerializableExtra("error");
-                 txtResul.setText(" wsq error message :"+fingerLeftError+"/n");
+                 Log.d("fingerLeftError DATA",""+fingerLeftError);
+                 Log.d("fingerRigthError DATA",""+fingerRigthError);
+                 txtResul.setText(" wsq error message for left finger :"+fingerLeftError+"\n"+
+                         " wsq error message for left right:"+fingerRigthError);
 
 
             }
@@ -159,22 +162,5 @@ public class PrincipalActivity extends AppCompatActivity {
         }
     }
 
-    public Bitmap getBitmapFromUri(Uri uri) throws FileNotFoundException, IOException{
-        InputStream input = this.getContentResolver().openInputStream(uri);
-
-        BitmapFactory.Options onlyBoundsOptions = new BitmapFactory.Options();
-        onlyBoundsOptions.inJustDecodeBounds = true;
-        onlyBoundsOptions.inDither=true;//optional
-        onlyBoundsOptions.inPreferredConfig= Bitmap.Config.ARGB_8888;//optional
-        BitmapFactory.decodeStream(input, null, onlyBoundsOptions);
-        input.close();
-         BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-        bitmapOptions.inDither = true; //optional
-        bitmapOptions.inPreferredConfig=Bitmap.Config.ARGB_8888;//
-        input = this.getContentResolver().openInputStream(uri);
-        Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
-        input.close();
-        return bitmap;
-    }
 
 }
